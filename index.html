@@ -71,32 +71,24 @@
   let loginClickTimer = null;
   let currentAdminUser = null;
 
-  // ✅ FUNCIÓN CORREGIDA - USA POST CON FORMDATA
+  // ✅ FUNCIÓN CORREGIDA - USA GET CON PARÁMETROS EN LA URL
   async function apiFetch(action, params = {}, button = null) {
     if (button) button.disabled = true;
-    
-    console.log('Enviando:', { action, params }); // Debug
-    
-    // Crear FormData en lugar de URL parameters
-    const formData = new FormData();
-    formData.append('action', action);
-    
-    // Agregar parámetros al FormData
+
+    // Construye la URL con los parámetros
+    const url = new URL(API_URL);
+    url.searchParams.append('action', action);
     for (const key in params) {
-      formData.append(key, params[key]);
+      url.searchParams.append(key, params[key]);
     }
     
+    console.log('Enviando petición GET a:', url.href); // Debug
+
     try {
-      // POST request con FormData
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        body: formData
-      });
-      
-      console.log('Response status:', response.status); // Debug
+      const response = await fetch(url); // Petición GET simple
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Error de red: ${response.statusText}`);
       }
       
       const result = await response.json();
@@ -104,17 +96,8 @@
       return result;
       
     } catch (error) {
-      console.error('Error completo:', error);
-      
-      // Mensajes más específicos según el tipo de error
-      let errorMessage = 'Error de conexión';
-      if (error.name === 'TypeError') {
-        errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión.';
-      } else if (error.message.includes('HTTP')) {
-        errorMessage = 'Error del servidor: ' + error.message;
-      }
-      
-      return { success: false, message: errorMessage };
+      console.error('Error completo en fetch:', error);
+      return { success: false, message: 'Error de conexión. Verifica la consola para más detalles.' };
     } finally {
       if (button) button.disabled = false;
     }
