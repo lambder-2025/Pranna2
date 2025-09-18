@@ -71,20 +71,50 @@
   let loginClickTimer = null;
   let currentAdminUser = null;
 
+  // ✅ FUNCIÓN CORREGIDA - USA POST CON FORMDATA
   async function apiFetch(action, params = {}, button = null) {
     if (button) button.disabled = true;
-    const url = new URL(API_URL);
-    url.searchParams.append('action', action);
+    
+    console.log('Enviando:', { action, params }); // Debug
+    
+    // Crear FormData en lugar de URL parameters
+    const formData = new FormData();
+    formData.append('action', action);
+    
+    // Agregar parámetros al FormData
     for (const key in params) {
-      url.searchParams.append(key, params[key]);
+      formData.append(key, params[key]);
     }
+    
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Error de red');
-      return await response.json();
+      // POST request con FormData
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData
+      });
+      
+      console.log('Response status:', response.status); // Debug
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('Resultado:', result); // Debug
+      return result;
+      
     } catch (error) {
-      console.error('Error en apiFetch:', error);
-      return { success: false, message: error.message };
+      console.error('Error completo:', error);
+      
+      // Mensajes más específicos según el tipo de error
+      let errorMessage = 'Error de conexión';
+      if (error.name === 'TypeError') {
+        errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión.';
+      } else if (error.message.includes('HTTP')) {
+        errorMessage = 'Error del servidor: ' + error.message;
+      }
+      
+      return { success: false, message: errorMessage };
     } finally {
       if (button) button.disabled = false;
     }
