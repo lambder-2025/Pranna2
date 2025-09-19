@@ -39,7 +39,14 @@
       <button id="adminLoginBtn">Acceder</button>
     </div>
   </div>
-  <div id="appView" class="view hidden"></div>
+  <div id="appView" class="view hidden">
+      <div class="card">
+          <h3 id="customerName"></h3>
+          <p>Visitas: <span id="customerVisits"></span></p>
+          <div id="customerQrCode"></div>
+      </div>
+      <button onclick="logout()">Cerrar Sesión</button>
+  </div>
   <div id="adminDashboardView" class="view hidden">
     <div class="tab-buttons">
         <button class="tab-btn active" data-tab="search">Buscar</button>
@@ -52,7 +59,11 @@
         </div>
     <div id="registerTab" class="tab-content card hidden">
         <h3>Registrar Cliente</h3>
-        </div>
+        <input id="regName" type="text" placeholder="Nombre completo del Cliente">
+        <input id="regPhone" type="tel" placeholder="Teléfono (10 dígitos)" maxlength="10">
+        <input id="regBdate" type="date" placeholder="Fecha de Nacimiento">
+        <button id="registerCustomerBtn">Registrar Cliente</button>
+    </div>
     <div id="chatTab" class="tab-content card hidden">
         <h3>Chat Interno</h3>
         </div>
@@ -62,7 +73,7 @@
         <input id="newPassword" type="password" placeholder="Nueva Contraseña">
         <button id="changePasswordBtn">Actualizar Contraseña</button>
     </div>
-    <button onclick="logout()">Cerrar Sesión</button>
+    <button onclick="logout()">Cerrar Sesión de Vendedor</button>
   </div>
 </main>
 <script>
@@ -71,30 +82,18 @@
   let loginClickTimer = null;
   let currentAdminUser = null;
 
-  // ✅ FUNCIÓN CORREGIDA - USA GET CON PARÁMETROS EN LA URL
   async function apiFetch(action, params = {}, button = null) {
     if (button) button.disabled = true;
-
-    // Construye la URL con los parámetros
     const url = new URL(API_URL);
     url.searchParams.append('action', action);
     for (const key in params) {
       url.searchParams.append(key, params[key]);
     }
-    
-    console.log('Enviando petición GET a:', url.href); // Debug
-
     try {
-      const response = await fetch(url); // Petición GET simple
-      
-      if (!response.ok) {
-        throw new Error(`Error de red: ${response.statusText}`);
-      }
-      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
       const result = await response.json();
-      console.log('Resultado:', result); // Debug
       return result;
-      
     } catch (error) {
       console.error('Error completo en fetch:', error);
       return { success: false, message: 'Error de conexión. Verifica la consola para más detalles.' };
@@ -120,7 +119,7 @@
         showView('adminLoginView');
       }
     } else {
-      loginCustomer();
+      // loginCustomer(); // Aún no implementado
     }
   });
 
@@ -149,24 +148,46 @@
   document.getElementById('changePasswordBtn').addEventListener('click', async (event) => {
       const oldPassword = document.getElementById('currentPassword').value;
       const newPassword = document.getElementById('newPassword').value;
-
       if (!oldPassword || !newPassword) {
           alert("Por favor, llena ambos campos de contraseña.");
           return;
       }
-      
       const result = await apiFetch('admin_changePassword', { username: currentAdminUser, oldPassword, newPassword }, event.target);
-      
       alert(result.message);
-
       if(result.success) {
         document.getElementById('currentPassword').value = '';
         document.getElementById('newPassword').value = '';
       }
   });
 
-  function loginCustomer() { console.log('Iniciando sesión como cliente...'); }
-  function logout() { currentAdminUser = null; showView('customerLoginView'); }
+  // --- NUEVA LÓGICA PARA REGISTRAR CLIENTE ---
+  document.getElementById('registerCustomerBtn').addEventListener('click', async (event) => {
+      const name = document.getElementById('regName').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const birthDate = document.getElementById('regBdate').value;
+
+      if (!name || phone.length !== 10 || !birthDate) {
+          alert('Por favor, completa todos los campos correctamente. El teléfono debe tener 10 dígitos.');
+          return;
+      }
+
+      const result = await apiFetch('admin_registerCustomer', { name, phone, birthDate }, event.target);
+      alert(result.message); // Muestra "Cliente registrado con éxito" o el error
+
+      if (result.success) {
+          // Limpiar el formulario
+          document.getElementById('regName').value = '';
+          document.getElementById('regPhone').value = '';
+          document.getElementById('regBdate').value = '';
+      }
+  });
+
+  function logout() { 
+      currentAdminUser = null;
+      // Reiniciar sesión de cliente si estuviera guardada
+      localStorage.removeItem('customerSession');
+      showView('customerLoginView');
+  }
 </script>
 </body>
 </html>
